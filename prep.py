@@ -42,7 +42,7 @@ def load_data_csv():
 
 # Beginning ...
 def main():
-    X, Y  = load_data_csv()
+    X, Y = load_data_csv()
     save_data(X, Y)
     
 

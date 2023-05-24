@@ -9,7 +9,7 @@ def load_config():
     cnf_sae = np.genfromtxt('cnf_sae.csv', delimiter=',')    
     cnf_sft = np.genfromtxt('cnf_softmax.csv', delimiter=',')    
 
-    sae = {
+    params = {
         'p_inverse_param'  : cnf_sae[0],
         'encoder_act_func' : cnf_sae[1],
         'max_iterations'   : cnf_sae[2],
@@ -17,15 +17,12 @@ def load_config():
         'learning_rate'    : cnf_sae[4],
         'encoder1_nodes'   : cnf_sae[5],
         'encoder2_nodes'   : cnf_sae[6],
+        'max_iterations' : cnf_sft[0],
+        'learning_rate'  : cnf_sft[1],
+        'minibatch_size' : cnf_sft[2],
     }
 
-    sft = {
-       'max_iterations' : cnf_sft[0],
-       'learning_rate'  : cnf_sft[1],
-       'minibatch_size' : cnf_sft[2],
-    }
-
-    return sae, sft
+    return params
 
 
 # Initialize one-wieght

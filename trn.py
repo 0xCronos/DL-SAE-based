@@ -21,7 +21,7 @@ def train_softmax(x, y, par1, par2):
 
     for Iter in range(1, par1[0]):
         idx     = np.random.permutation(x.shape[1])
-        xe, ye  = x[:,idx], y[:,idx]         
+        xe, ye  = x[:,idx], y[:,idx]
         W, V, c = train_sft_batch(xe, ye, W, V, param)
 
     return(W, Costo)
@@ -42,39 +42,40 @@ def train_ae_batch(x, w1, v, w2, param):
 def train_ae(X, param):
     w1 = ut.iniW(X, )
 
-    for Iter in range(1, param):
-        Xe       = X[:, np.random.permutation(X.shape[1])]
+    for i in range(1, param):
+        Xe = X[:, np.random.permutation(X.shape[1])]
         w1, v, c = train_ae_batch(Xe, w1, v, w2, param)
 
     return(w2.T)
 
 
 #SAE's Training
-def train_sae(X, params):
-    W = {}
+def train_dl(X, params):
+    encoder_nodes = list(params.values())[5:]
+    W = []
     
-    for encoder_nodes in list(params.values())[5:]:
-        w1 = train_ae(X, encoder_nodes, params)
+    for nodes_amount in encoder_nodes:
+        w1 = train_ae(X, nodes_amount, params)
         X  = ut.act_functs(w1, X, params)
-        Apilar(W, w1)
+        W.append(w1)
 
     return(W, X)
 
 
 #load Data for Training
 def load_data_trn():
-    xe = np.loadfromtxt('X_train.csv', delimiter=',')
-    ye = np.loadfromtxt('Y_train.csv', delimiter=',')
+    xe = np.loadtxt('X_train.csv', delimiter=',')
+    ye = np.loadtxt('Y_train.csv', delimiter=',')
 
     return xe, ye
 
 
 # Beginning ...
 def main():
-    p_sae, p_sft = ut.load_config()
-    xe, ye       = load_data_trn()
-    W, Xr        = train_sae(xe, p_sae)
-    #Ws, cost     = train_softmax(Xr, ye, p_sft, p_sae)
+    params = ut.load_config()
+    xe, ye = load_data_trn()
+    W, Xr = train_dl(xe, params)
+    #Ws, cost = train_softmax(Xr, ye, p_sft, p_sae)
     #ut.save_w_dl(W, Ws, cost)
             
 

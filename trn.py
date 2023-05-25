@@ -1,6 +1,5 @@
 #Training DL via RMSProp+Pinv
 
-import pandas     as pd
 import numpy      as np
 import utility    as ut
 
@@ -16,11 +15,11 @@ def train_sft_batch(x, y, W, V, param):
 
 # Softmax's training via SGD with Momentum
 def train_softmax(x, y, par1, par2):
-    W        = ut.iniW(y.shape[0], x.shape[0])
-    V        = np.zeros(W.shape) 
+    W = ut.iniW(y.shape[0], x.shape[0])
+    V = np.zeros(W.shape) 
 
     for Iter in range(1, par1[0]):
-        idx     = np.random.permutation(x.shape[1])
+        idx = np.random.permutation(x.shape[1])
         xe, ye  = x[:,idx], y[:,idx]
         W, V, c = train_sft_batch(xe, ye, W, V, param)
 
@@ -28,46 +27,49 @@ def train_softmax(x, y, par1, par2):
     
 
 # AE's Training with miniBatch
-def train_ae_batch(x, w1, v, w2, param):
-    numBatch = np.int16(np.floor(x.shape[1]/param[0]))
-    cost = [] 
+def train_ae_batch(X, w1, v, w2, param):
+    amount_of_batches = np.int16(np.floor(X.shape[1]/param[0]))
+    costs = []
     
-    for i in range(numBatch):
+    for i in range(amount_of_batches):
         pass
 
-    return(w1, v, cost)
+    return(w1, v, costs)
 
 
 # AE's Training by use miniBatch RMSprop+Pinv
-def train_ae(X, param):
-    w1 = ut.iniW(X, )
+def train_ae(X, amount_of_nodes, param):
+    w1 = ut.iniW(amount_of_nodes, X.shape[0])
 
-    for i in range(1, param):
-        Xe = X[:, np.random.permutation(X.shape[1])]
-        w1, v, c = train_ae_batch(Xe, w1, v, w2, param)
+    for i in range(param['sae_max_it']):
+        rand_X = X[:, np.random.permutation(X.shape[1])]
+        w2 = np.linalg.pinv(rand_X) # TODO: usar ut.pinv_ae
+        print(w2.shape)
+        exit()
+        w1, v, c = train_ae_batch(rand_X, w1, v, w2, param)
 
     return(w2.T)
 
 
+
 #SAE's Training
 def train_dl(X, params):
-    encoder_nodes = list(params.values())[5:]
-    W = []
+    encoders_weights = []
     
-    for nodes_amount in encoder_nodes:
-        w1 = train_ae(X, nodes_amount, params)
-        X  = ut.act_functs(w1, X, params)
-        W.append(w1)
-
-    return(W, X)
+    encoders_nodes = list(params.values())[5:]
+    for amount_of_nodes in encoders_nodes:
+        W_enc = train_ae(X, amount_of_nodes, params)
+        X_enc  = ut.act_functs(W_enc, X, params)
+        encoders_weights.append(X_enc)
+        
+    return(encoders_weights, X_enc)
 
 
 #load Data for Training
 def load_data_trn():
-    xe = np.loadtxt('X_train.csv', delimiter=',')
-    ye = np.loadtxt('Y_train.csv', delimiter=',')
-
-    return xe, ye
+    X = np.loadtxt('X_train.csv', delimiter=',')
+    Y = np.loadtxt('Y_train.csv', delimiter=',')
+    return X.T, Y.T
 
 
 # Beginning ...

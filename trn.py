@@ -29,7 +29,7 @@ def train_softmax(x, y, par1, par2):
 def get_batch_indexes(minibatch_size, n):
     start_index = n * minibatch_size
     end_index = start_index + minibatch_size
-    return np.arange(start_index, end_index, 1).astype(int)
+    return np.arange(start_index, end_index).astype(int)
 
 
 # AE's Training with miniBatch
@@ -43,9 +43,11 @@ def train_ae_batch(ae, X, params):
         Xe = X[:, idx]
         
         X_prime = ut.ae_forward(ae, Xe, params)
-        We = ut.ae_backward(ae, params)
 
         cost = (np.sum((X_prime - Xe) ** 2)) / (2 * minibatch_size)
+
+        We = ut.ae_backward(ae, params) # We, Wd and V updated at this
+
         costs.append(cost) 
         
     print(f'Finished {amount_of_batches} batches with mean cost: {np.mean(costs)}')
@@ -80,7 +82,7 @@ def train_ae(X, amount_of_nodes, params):
         if i % 10 == 0 and i != 0:
             print(f'Iteration: {i}', mse[i])
 
-    return We, mse
+    return We, np.array(mse)
 
 
 #SAE's Training

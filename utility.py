@@ -64,42 +64,43 @@ def iniW(next, prev):
     
 
 # STEP 1: Feed-forward of AE
-def ae_forward(autoencoder, X, params):    
-    Z1 = autoencoder['W'][0] @ X
+def ae_forward(ae, X, params):    
+    Z1 = ae['W'][0] @ X
     H = act_function(Z1, params['encoder_act_func'])
     
-    Z2 = autoencoder['W'][1] @ H
+    Z2 = ae['W'][1] @ H
     X_prime = Z2 # act_function(Z2, -1) # f(x) = x
 
-    autoencoder['Z'] = [Z1, Z2]
-    autoencoder['A'] = [X, H, X_prime]
+    ae['Z'] = [Z1, Z2]
+    ae['A'] = [X, H, X_prime]
 
     return X_prime
 
 
 def ae_backward(ae, params):
     Xe = ae['A'][0]
+
     Wd = calculate_pinv(Xe, ae['W'][0], params['p_inverse_param'])
     
     gW1 = gradW1(ae, params)
 
     # RMSProp (Update We)
-    We = updW1_rmsprop(ae, gW1, params)
+    We, Ve = updW1_rmsprop(ae, gW1, params)
 
     # pre-calculated pseudoinverse (Update Wd)
     ae['W'][1] = Wd
 
-    return We
+    return ae['W'][0]
     
- 
    
 # Calculate Pseudo-inverse
 def calculate_pinv(X, We, C):
     H = We @ X
     A = (H @ H.T) + (np.identity(H.T.shape[1]) / C)
-    U, S, V = np.linalg.svd(A, full_matrices=False)
-    A_inv = V.T @ np.linalg.inv(np.diag(S)) @ U.T
-    Wd = X @ H.T @ A_inv
+    #U, S, V = np.linalg.svd(A, full_matrices=False)
+    #A_inv = V.T @ np.linalg.inv(np.diag(S)) @ U.T
+    #Wd = X @ H.T @ A_inv
+    Wd = X @ H.T @ np.linalg.pinv(A)
     return Wd
 
 
@@ -123,16 +124,16 @@ def ae_summary(autoencoder, force_exit=False):
 def gradW1(ae, params):
     #ae_summary(autoencoder, force_exit=True)
     encoder_act_func = params['encoder_act_func']
+
+    E = (ae['A'][2] - ae['A'][0]) # (X' - X)
     
-    e = (ae['A'][2] - ae['A'][0]) # (X' - X)
+    delta = E
     
-    delta = e * ae['Z'][1]
-    
-    gW1 = (ae['W'][1].T @ delta) * (deriva_act(ae['Z'][0], encoder_act_func))
+    gW1 = (ae['W'][1].T @ delta) * deriva_act(ae['Z'][0], encoder_act_func)
     gW1 = gW1 @ ae['A'][0].T
 
     assert gW1.shape == ae['W'][0].shape, "TEST FAILED: Dimensions of encoder weight and gradient must be equal."
-    
+
     return gW1
 
 
@@ -141,11 +142,11 @@ def updW1_rmsprop(ae, gW1, params):
     beta = 0.9
     epsilon = 1e-8
     
-    ae['V'][0] = (beta * ae['V'][0]) + ((1 - beta) * np.square(gW1))
+    ae['V'][0] = (beta * ae['V'][0]) + ((1 - beta) * (gW1**2))
     grms = (1 / np.sqrt(ae['V'][0] + epsilon)) * gW1
     ae['W'][0] = ae['W'][0] - (params['sae_learning_rate'] * grms)
     
-    return ae['W'][0]
+    return ae['W'][0], ae['V'][0]
 
 
 # Update Softmax's weight via RMSprop

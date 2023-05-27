@@ -26,43 +26,85 @@ def train_softmax(x, y, par1, par2):
     return(W, Costo)
     
 
-# AE's Training with miniBatch
-def train_ae_batch(X, w1, v, w2, param):
-    amount_of_batches = np.int16(np.floor(X.shape[1]/param[0]))
-    costs = []
-    
-    for i in range(amount_of_batches):
-        pass
+def get_batch_indexes(minibatch_size, n):
+    start_index = n * minibatch_size
+    end_index = start_index + minibatch_size
+    return np.arange(start_index, end_index, 1).astype(int)
 
-    return(w1, v, costs)
+
+# AE's Training with miniBatch
+def train_ae_batch(ae, X, params):
+    minibatch_size = params['sae_minibatch_size']
+    amount_of_batches = np.int16(np.floor(X.shape[1] / minibatch_size))
+    
+    costs = []
+    for n in range(amount_of_batches):
+        idx = get_batch_indexes(minibatch_size, n)
+        Xe = X[:, idx]
+        
+        X_prime = ut.ae_forward(ae, Xe, params)
+        We = ut.ae_backward(ae, params)
+
+        cost = (np.sum((X_prime - Xe) ** 2)) / (2 * minibatch_size)
+        costs.append(cost) 
+        
+    print(f'Finished {amount_of_batches} batches with mean cost: {np.mean(costs)}')
+        
+    return We, costs
+
+
+# Create single-layer autoencoder
+def create_ae(hidden_layer_nodes, features):
+    W = [
+        ut.iniW(hidden_layer_nodes, features), #W encoder
+        ut.iniW(features, hidden_layer_nodes), #W decoder
+    ]
+    V = [
+        np.zeros_like(W[0]) # Setup momentum for only W encoder
+    ]
+    return { 'W': W, 'V': V, 'A': [], 'Z': []}
 
 
 # AE's Training by use miniBatch RMSprop+Pinv
-def train_ae(X, amount_of_nodes, param):
-    w1 = ut.iniW(amount_of_nodes, X.shape[0])
+def train_ae(X, amount_of_nodes, params):
+    ae = create_ae(amount_of_nodes, X.shape[0])
 
-    for i in range(param['sae_max_it']):
-        rand_X = X[:, np.random.permutation(X.shape[1])]
-        w2 = np.linalg.pinv(rand_X) # TODO: usar ut.pinv_ae
-        print(w2.shape)
-        exit()
-        w1, v, c = train_ae_batch(rand_X, w1, v, w2, param)
+    mse = []
+    # train the autoencoder n iterations
+    for i in range(params['sae_max_it']):
+        X_permuted = X[:, np.random.permutation(X.shape[1])]
+        We, costs = train_ae_batch(ae, X_permuted, params)
+        
+        mse.append(np.mean(costs))
+        
+        if i % 10 == 0 and i != 0:
+            print(f'Iteration: {i}', mse[i])
 
-    return(w2.T)
-
+    return We, mse
 
 
 #SAE's Training
 def train_dl(X, params):
-    encoders_weights = []
+    W = []
+    A = [X]
+
+    aes_mse = []
+    encoders_nodes = list(params.values())[8:]
+    for n, amount_of_nodes in enumerate(encoders_nodes):
+        print(f'Training autoencoder {n+1}...')
+
+        We, ae_mse = train_ae(X, amount_of_nodes, params) # Encoded Weights
+        X = ut.act_function((We @ X), params['encoder_act_func']) # New Data
+
+        W.append(We) # Store encoded weights for later
+        A.append(X)
+        aes_mse.append(ae_mse)
+        print(f'Training autoencoder {n+1}...: Done')
+        break
     
-    encoders_nodes = list(params.values())[5:]
-    for amount_of_nodes in encoders_nodes:
-        W_enc = train_ae(X, amount_of_nodes, params)
-        X_enc  = ut.act_functs(W_enc, X, params)
-        encoders_weights.append(X_enc)
-        
-    return(encoders_weights, X_enc)
+    ut.plot_mses(aes_mse)
+
+    return W, X
 
 
 #load Data for Training
@@ -75,11 +117,11 @@ def load_data_trn():
 # Beginning ...
 def main():
     params = ut.load_config()
-    xe, ye = load_data_trn()
-    W, Xr = train_dl(xe, params)
-    #Ws, cost = train_softmax(Xr, ye, p_sft, p_sae)
+    Xe, Ye = load_data_trn()
+    W, Xr = train_dl(Xe, params)
+    #Ws, cost = train_softmax(Xr, Ye, p_sft, p_sae)
     #ut.save_w_dl(W, Ws, cost)
             
 
-if __name__ == '__main__':   
+if __name__ == '__main__':
 	 main()

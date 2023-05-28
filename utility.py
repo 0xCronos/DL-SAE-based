@@ -80,7 +80,7 @@ def ae_forward(ae, X, params):
 def ae_backward(ae, params):
     Xe = ae['A'][0]
 
-    Wd = calculate_pinv(Xe, ae['W'][0], params['p_inverse_param'])
+    Wd = calculate_pinv(Xe, ae['A'][1], params['p_inverse_param'])
     
     gW1 = gradW1(ae, params)
 
@@ -94,13 +94,11 @@ def ae_backward(ae, params):
     
    
 # Calculate Pseudo-inverse
-def calculate_pinv(X, We, C):
-    H = We @ X
+def calculate_pinv(X, H, C):
     A = (H @ H.T) + (np.identity(H.T.shape[1]) / C)
-    #U, S, V = np.linalg.svd(A, full_matrices=False)
-    #A_inv = V.T @ np.linalg.inv(np.diag(S)) @ U.T
-    #Wd = X @ H.T @ A_inv
-    Wd = X @ H.T @ np.linalg.pinv(A)
+    U, S, V = np.linalg.svd(A, full_matrices=False)
+    A_inv = V.T @ np.linalg.inv(np.diag(S)) @ U.T
+    Wd = X @ H.T @ A_inv
     return Wd
 
 
@@ -142,9 +140,9 @@ def updW1_rmsprop(ae, gW1, params):
     beta = 0.9
     epsilon = 1e-8
     
-    ae['V'][0] = (beta * ae['V'][0]) + ((1 - beta) * (gW1**2))
+    ae['V'][0] = (beta * ae['V'][0]) + (1 - beta) * gW1 ** 2
     grms = (1 / np.sqrt(ae['V'][0] + epsilon)) * gW1
-    ae['W'][0] = ae['W'][0] - (params['sae_learning_rate'] * grms)
+    ae['W'][0] = ae['W'][0] - params['sae_learning_rate'] * grms
     
     return ae['W'][0], ae['V'][0]
 

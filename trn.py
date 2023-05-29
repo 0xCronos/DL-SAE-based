@@ -45,7 +45,7 @@ def train_softmax(X, Y, params):
             print(f'Iteration: {i}', mse[i])
 
     print(f'Training softmax...: Done')
-    ut.plot_this([mse], 'graphs/softmax/train', ['Softmax'], title='Softmax cost function minimization"')
+    ut.plot_this([mse], 'graphs/softmax/train', ['Softmax'], title='Softmax cost function minimization')
     return(ann['W'][-1], np.array(mse))
     
     
@@ -116,9 +116,9 @@ def train_dl(X, params):
         print(f'Training autoencoder {n+1}...: Done')
         mses.append(ae_mse)
 
-    ut.plot_this(mses, 'graphs/ae/all.png', [f'Autoencoder {i+1}' for i in range(len(mses))], title="AE cost function minimization")
+    ut.plot_this(mses, 'graphs/ae/all.png', [f'Autoencoder {i+1}' for i in range(len(mses))], title="Autoencoder cost function minimization")
     for i in range(len(mses)):
-        ut.plot_this([mses[i]], f'graphs/ae/{i+1}.png', [f'Autoencoder {i+1}'], title="AE cost function minimization")
+        ut.plot_this([mses[i]], f'graphs/ae/{i+1}.png', [f'Autoencoder {i+1}'], title="Autoencoder cost function minimization")
     return W, X
 
 

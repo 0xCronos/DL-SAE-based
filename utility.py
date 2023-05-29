@@ -59,7 +59,6 @@ def iniW(next, prev):
     r = np.sqrt(6/(next+ prev))
     w = np.random.rand(next, prev)
     w = w*2*r-r
-
     return(w)
     
 
@@ -90,22 +89,6 @@ def calculate_pinv(X, H, C):
     Wd = X @ H.T @ A_inv
     return Wd
 
-
-def ae_summary(autoencoder, force_exit=False):
-    print("Summary for autoencoder")
-    print("X - We -> H - Wd -> X'\n")
-    print(f"X shape is: {autoencoder['A'][0].shape}")
-    print(f"We shape is: {autoencoder['W'][0].shape}")
-    print(f"H shape is: {autoencoder['A'][1].shape}") # this is the hidden layer
-    print(f"Wd shape is: {autoencoder['W'][1].shape}")
-    print(f"X' shape is: {autoencoder['A'][2].shape}")
-    print("*"*25)
-    print(f"A len is: {len(autoencoder['A'])}")
-    print(f"Z len is: {len(autoencoder['Z'])}")
-    print(f"W len is: {len(autoencoder['W'])}")
-    print(f"V len is: {len(autoencoder['V'])}")
-    exit() if force_exit else '' 
-
  
 # STEP 2: Feed-Backward for AE
 def gradW1(ae, params):
@@ -117,7 +100,7 @@ def gradW1(ae, params):
     return gW1
 
 
-def sft_forward(ann, X, Y, params):
+def sft_forward(ann, params):
     L = ann['layers']
     for l in range(1, L):
         ann['Z'][l] = (ann['W'][l-1] @ ann['A'][l-1])
@@ -125,20 +108,20 @@ def sft_forward(ann, X, Y, params):
             ann['A'][l] = act_function(ann['Z'][l], params['encoder_act_func'])
         else: # output layer
             ann['A'][l] = softmax(ann['Z'][l])
-    return ann['A'][L-1]
+    return ann['A'][-1]
 
 
 def sft_backward(ann, Y, params):
     gW = gradW_softmax(ann, Y, params)
-    #W, V = updW_sft_rmsprop(ann, gW, params)
+    W, V = updW_sft_rmsprop(ann, gW, params)
     return W, V
 
 
 def calculate_cost(Y, Y_pred, params):
     minibatch_size = params['sft_minibatch_size']
-    log_Y_pred = np.log(Y_pred)
-    log_Y_pred[log_Y_pred == -np.inf] = 0 
-    cost = -np.sum(Y @ log_Y_pred.T) * (1 / (np.square(minibatch_size) * Y_pred.shape[0]))
+    epsilon = 1e-8
+    #cost = -np.sum(Y * np.log(Y_pred + epsilon)) * (1 / (np.square(minibatch_size) * Y_pred.shape[0]))
+    cost = -(np.sum(Y * np.log(Y_pred + epsilon)) / (minibatch_size))
     return cost
 
 # Update AE's weight via RMSprop
@@ -152,36 +135,29 @@ def updW1_rmsprop(ae, gW1, params):
 
 # Update Softmax's weight via RMSprop
 def updW_sft_rmsprop(ann, gW, params):
-    beta, eps = 0.9, 1e-8
-    
-    return(w, v)
+    beta, epsilon = 0.9, 1e-8
+    ann['V'] = beta * ann['V'] + (1 - beta) * np.square(gW)
+    grms = (1 / np.sqrt(ann['V'] + epsilon)) * gW
+    ann['W'][-1] = ann['W'][-1] - (params['sft_learning_rate'] * grms)
+    return ann['W'][-1], ann['V']
 
 
 # Softmax's gradient
 def gradW_softmax(ann, Y, params):
     minibatch_size = params['sft_minibatch_size']
-    print("Y shape", Y.shape)
-    print("Y predicted shape", ann['A'][-1].shape)
-
-    # print(ann['A'][0].T.shape)
-    # exit()
-    
     gW = -(1/minibatch_size) * ((Y - ann['A'][-1]) @ ann['A'][0].T)
-    #print("Current shape for gW is:", gW.shape)
-    #print("Expected shape for gW is:", ann['W'][-1].shape)
-    #assert gW.shape == ann['W'][-1].shape, "TEST FAILED: Dimensions of encoder weight and gradient must be equal."
     return gW
 
 # Calculate Softmax
 def softmax(Z):
     exp_Z = np.exp(Z - np.max(Z))
-    #exp_Z = np.exp(Z)
     return(exp_Z / exp_Z.sum(axis=0, keepdims=True))
 
 
 # save weights SAE and cost of Softmax
-def save_w_dl(W, Ws, cost):
-    ...
+def save_w_dl(W, costs):
+    np.savez("W_snn.npz", *W)
+    np.savetxt("costo.csv", costs, fmt="%.10f")
     
     
 def plot_mses(X):

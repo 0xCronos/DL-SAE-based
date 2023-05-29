@@ -6,4 +6,5 @@ costo.csv
 fscores.csv
 cmatriz.csv
 W_snn.npz
+graphs/*
 .vscode

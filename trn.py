@@ -57,15 +57,19 @@ def get_batch_indexes(minibatch_size, n):
 # AE's Training with miniBatch
 def train_ae_batch(ae, X, params):
     minibatch_size = params['sae_minibatch_size']
+    act_func = params['encoder_act_func']
     amount_of_batches = np.int16(np.floor(X.shape[1] / minibatch_size))
     
     costs = []
+
+    ae['W'][1] = ut.calculate_pinv(X, ut.act_function(np.dot(ae['W'][0], X), act_func), params['p_inverse_param'])
+    
     for n in range(amount_of_batches):
         idx = get_batch_indexes(minibatch_size, n)
         Xb = X[:, idx]
         X_prime = ut.ae_forward(ae, Xb, params)
-        We = ut.ae_backward(ae, params) # We, Wd and V updated at this
-        cost = (np.sum((X_prime - Xb) ** 2)) / (2 * minibatch_size)
+        We = ut.ae_backward(ae, X, params) # We, Wd and V updated at this
+        cost = (np.sum(np.sum((X_prime - Xb) ** 2), axis=0)) / (2 * minibatch_size)
         costs.append(cost)
         
     return We, costs
@@ -93,24 +97,23 @@ def train_ae(X, amount_of_nodes, params):
         if i % 10 == 0 and i != 0:
             print(f'Iteration: {i}', mse[i])
 
-    return We, np.array(mse)
+    return ae['W'][0], np.array(mse)
 
 
 #SAE's Training
 def train_dl(X, params):
     W = []
-    Xr = X
 
     encoders_nodes = list(params.values())[8:]
     for n, amount_of_nodes in enumerate(encoders_nodes):
         print(f'Training autoencoder {n+1}...')
-        We, ae_mse = train_ae(Xr, amount_of_nodes, params) # Encoded Weights
-        Xr = ut.act_function((We @ Xr), params['encoder_act_func']) # New Data
+        We, ae_mse = train_ae(X, amount_of_nodes, params) # Encoded Weights
+        X = ut.act_function((We @ X), params['encoder_act_func']) # New Data
 
         W.append(We)
         print(f'Training autoencoder {n+1}...: Done')
 
-    return W, Xr
+    return W, X
 
 
 #load Data for Training

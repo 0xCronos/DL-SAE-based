@@ -73,11 +73,9 @@ def ae_forward(ae, X, params):
     return X_prime
 
 
-def ae_backward(ae, params):
-    Wd = calculate_pinv(ae['A'][0], ae['A'][1], params['p_inverse_param'])
+def ae_backward(ae, X, params):
     gW1 = gradW1(ae, params)
     We, _ = updW1_rmsprop(ae, gW1, params)
-    ae['W'][1] = Wd
     return We
     
    
@@ -88,6 +86,7 @@ def calculate_pinv(X, H, C):
     A_inv = V.T @ np.linalg.inv(np.diag(S)) @ U.T
     Wd = X @ H.T @ A_inv
     return Wd
+
 
  
 # STEP 2: Feed-Backward for AE
@@ -119,9 +118,9 @@ def sft_backward(ann, Y, params):
 
 def calculate_cost(Y, Y_pred, params):
     minibatch_size = params['sft_minibatch_size']
-    epsilon = 1e-8
-    #cost = -np.sum(Y * np.log(Y_pred + epsilon)) * (1 / (np.square(minibatch_size) * Y_pred.shape[0]))
-    cost = -(np.sum(Y * np.log(Y_pred + epsilon)) / (minibatch_size))
+    log_Y_pred = np.log(Y_pred)
+    log_Y_pred[log_Y_pred == -np.inf] = 0
+    cost = -np.sum(np.sum(Y * log_Y_pred, axis=0) / Y.shape[0]) / minibatch_size
     return cost
 
 # Update AE's weight via RMSprop

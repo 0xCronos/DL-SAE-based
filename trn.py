@@ -5,25 +5,53 @@ import utility    as ut
 
 
 # Training miniBatch for softmax
-def train_sft_batch(x, y, W, V, param):
-    costo = []    
-    for i in range(numBatch):   
-        pass
+def train_sft_batch(ann, X, Y, params):
+    minibatch_size = params['sft_minibatch_size']
+    amount_of_batches = np.int16(np.floor(X.shape[1] / minibatch_size))
+    costs = []
 
-    return(W, V, costo)
+    for n in range(amount_of_batches):   
+        idx = get_batch_indexes(minibatch_size, n)
+        Xb, Yb = X[:, idx], Y[:, idx]
+        ann['A'][0] = Xb
+        
+        Yb_pred = ut.sft_forward(ann, Xb, Yb, params)
+        W, V = ut.sft_backward(ann, Yb, params)
+
+        # TODO: check if cost function is correct (notice inf swap to zero value)
+        cost = ut.calculate_cost(Yb, Yb_pred, params)
+        # if np.isnan(cost):
+        #     print(Yb.shape)
+        #     print(Yb_pred.shape)
+        #     print(np.log(Yb_pred.T))
+        #     exit()
+        costs.append(cost)
+
+    return costs
+
+
+def create_ann(X, Y, W):    
+    WL = ut.iniW(Y.shape[0], W[-1].shape[0])
+    V = np.zeros_like(WL)
+    W.append(WL)
+    
+    A = [None] * (len(W) + 1)
+    Z = [None] * (len(W) + 1)
+    
+    return {'W': W, 'V': V, 'A': A, 'Z': Z, 'layers': len(W)+1}
 
 
 # Softmax's training via SGD with Momentum
-def train_softmax(x, y, par1, par2):
-    W = ut.iniW(y.shape[0], x.shape[0])
-    V = np.zeros(W.shape) 
-
-    for Iter in range(1, par1[0]):
-        idx = np.random.permutation(x.shape[1])
-        xe, ye  = x[:,idx], y[:,idx]
-        W, V, c = train_sft_batch(xe, ye, W, V, param)
-
-    return(W, Costo)
+def train_softmax(X, Y, W, params):
+    ann = create_ann(X, Y, W)
+    mse = []
+    for i in range(params['sft_max_it']):
+        idx = np.random.permutation(X.shape[1])
+        Xr, Yr = X[:,idx], Y[:,idx]
+        costs = train_sft_batch(ann, Xr, Yr, params)
+        mse.append(np.mean(costs))
+    
+    return(W, np.array(mse))
     
 
 def get_batch_indexes(minibatch_size, n):
@@ -40,18 +68,14 @@ def train_ae_batch(ae, X, params):
     costs = []
     for n in range(amount_of_batches):
         idx = get_batch_indexes(minibatch_size, n)
-        Xe = X[:, idx]
-        
-        X_prime = ut.ae_forward(ae, Xe, params)
+        Xb = X[:, idx]
 
-        cost = (np.sum((X_prime - Xe) ** 2)) / (2 * minibatch_size)
-
+        X_prime = ut.ae_forward(ae, Xb, params)
         We = ut.ae_backward(ae, params) # We, Wd and V updated at this
-
-        costs.append(cost) 
+        cost = (np.sum((X_prime - Xb) ** 2)) / (2 * minibatch_size)
+        costs.append(cost)
         
     print(f'Finished {amount_of_batches} batches with mean cost: {np.mean(costs)}')
-        
     return We, costs
 
 
@@ -61,9 +85,7 @@ def create_ae(hidden_layer_nodes, features):
         ut.iniW(hidden_layer_nodes, features), #W encoder
         ut.iniW(features, hidden_layer_nodes), #W decoder
     ]
-    V = [
-        np.zeros_like(W[0]) # Setup momentum for only W encoder
-    ]
+    V = np.zeros_like(W[0]) # Setup momentum for only W encoder
     return { 'W': W, 'V': V, 'A': [], 'Z': []}
 
 
@@ -72,13 +94,11 @@ def train_ae(X, amount_of_nodes, params):
     ae = create_ae(amount_of_nodes, X.shape[0])
 
     mse = []
-    # train the autoencoder n iterations
     for i in range(params['sae_max_it']):
-        X_permuted = X[:, np.random.permutation(X.shape[1])]
-        We, costs = train_ae_batch(ae, X_permuted, params)
-        
+        Xr = X[:, np.random.permutation(X.shape[1])]
+        We, costs = train_ae_batch(ae, Xr, params)
         mse.append(np.mean(costs))
-        
+
         if i % 10 == 0 and i != 0:
             print(f'Iteration: {i}', mse[i])
 
@@ -88,23 +108,20 @@ def train_ae(X, amount_of_nodes, params):
 #SAE's Training
 def train_dl(X, params):
     W = []
-    A = [X]
+    Xr = X
+    aes_mses = []
 
-    aes_mse = []
     encoders_nodes = list(params.values())[8:]
     for n, amount_of_nodes in enumerate(encoders_nodes):
         print(f'Training autoencoder {n+1}...')
+        We, ae_mse = train_ae(Xr, amount_of_nodes, params) # Encoded Weights
+        Xr = ut.act_function((We @ Xr), params['encoder_act_func']) # New Data
 
-        We, ae_mse = train_ae(X, amount_of_nodes, params) # Encoded Weights
-        X = ut.act_function((We @ X), params['encoder_act_func']) # New Data
-
-        W.append(We) # Store encoded weights for later
-        A.append(X)
-        aes_mse.append(ae_mse)
+        W.append(We)
+        aes_mses.append(ae_mse)
         print(f'Training autoencoder {n+1}...: Done')
-        break
     
-    ut.plot_mses(aes_mse)
+    #ut.plot_mses(aes_mses)
 
     return W, X
 
@@ -120,10 +137,12 @@ def load_data_trn():
 def main():
     params = ut.load_config()
     Xe, Ye = load_data_trn()
-    W, Xr = train_dl(Xe, params)
-    #Ws, cost = train_softmax(Xr, Ye, p_sft, p_sae)
+    W, _ = train_dl(Xe, params)
+    Ws, costs = train_softmax(Xe, Ye, W, params)
+    print(costs)
+    ut.plot_mses([costs])
     #ut.save_w_dl(W, Ws, cost)
             
 
 if __name__ == '__main__':
-	 main()
+	main()

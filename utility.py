@@ -159,7 +159,7 @@ def save_w_dl(W, costs):
     np.savetxt("costo.csv", costs, fmt="%.10f")
 
 
-def plot_this(X, path_to_save, labels=None):
+def plot_this(X, path_to_save, labels=None, title=None):
     import matplotlib as mpl
     import matplotlib.pyplot as plt
 
@@ -171,7 +171,7 @@ def plot_this(X, path_to_save, labels=None):
 
     # Enable legend
     ax.legend()
-    ax.set_title("AE cost function minimization")
+    ax.set_title(title) if title else ''
     ax.set_xlabel('Iterations')
     ax.set_ylabel('Cost')
 

@@ -45,7 +45,7 @@ def train_softmax(X, Y, params):
             print(f'Iteration: {i}', mse[i])
 
     print(f'Training softmax...: Done')
-    ut.plot_this([mse], 'graphs/softmax/train', ['Softmax'], title='Softmax')
+    ut.plot_this([mse], 'graphs/softmax/train', ['Softmax'], title='Softmax cost function minimization"')
     return(ann['W'][-1], np.array(mse))
     
     

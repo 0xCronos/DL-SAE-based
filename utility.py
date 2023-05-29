@@ -165,7 +165,7 @@ def plot_this(X, path_to_save, labels=None, title=None):
 
     fig, ax = plt.subplots()
     for i, x in enumerate(X):
-        ax.plot(range(0, len(x)), x, 
+        ax.plot(range(0, len(x)), x,
                 linewidth=i+1,
                 label=labels[i] if labels[i] else f'{i+1}')
 

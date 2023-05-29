@@ -104,13 +104,6 @@ def train_ae(X, amount_of_nodes, params):
 def train_dl(X, params):
     W = []
 
-<<<<<<< Updated upstream
-=======
-<<<<<<< Updated upstream
-    return(W, X)
-=======
-    mses = []
->>>>>>> Stashed changes
     encoders_nodes = list(params.values())[8:]
     for n, amount_of_nodes in enumerate(encoders_nodes):
         print(f'Training autoencoder {n+1}...')
@@ -118,18 +111,9 @@ def train_dl(X, params):
         X = ut.act_function((We @ X), params['encoder_act_func']) # New Data
 
         W.append(We)
-<<<<<<< Updated upstream
         print(f'Training autoencoder {n+1}...: Done')
 
     return W, X
-=======
-        mses.append(ae_mse)
-        print(f'Training autoencoder {n+1}...: Done')
-
-    ut.plot_mses(mses)
-    return W, X
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 
 
 #load Data for Training

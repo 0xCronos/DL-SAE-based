@@ -32,6 +32,7 @@ def create_ann(X, Y):
 
 # Softmax's training via SGD with Momentum
 def train_softmax(X, Y, params):
+    print(f'Training softmax...')
     ann = create_ann(X, Y)
     mse = []
     for i in range(params['sft_max_it']):
@@ -39,6 +40,11 @@ def train_softmax(X, Y, params):
         Xr, Yr = X[:,idx], Y[:,idx]
         costs = train_sft_batch(ann, Xr, Yr, params)
         mse.append(np.mean(costs))
+
+        if i % 10 == 0 and i != 0:
+            print(f'Iteration: {i}', mse[i])
+
+    print(f'Training softmax...: Done')
     return(ann['W'][-1], np.array(mse))
     
     

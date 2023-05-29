@@ -157,22 +157,23 @@ def softmax(Z):
 def save_w_dl(W, costs):
     np.savez("W_snn.npz", *W)
     np.savetxt("costo.csv", costs, fmt="%.10f")
-    
-    
-def plot_mses(X):
+
+
+def plot_this(X, path_to_save, labels=None):
+    import matplotlib as mpl
     import matplotlib.pyplot as plt
 
+    fig, ax = plt.subplots()
     for i, x in enumerate(X):
-        plt.plot(range(0, len(x)), x, label=f'Iteration {i+1}')
+        ax.plot(range(0, len(x)), x, 
+                linewidth=i+1,
+                label=labels[i] if labels[i] else f'{i+1}')
 
-        # Set plot labels and title
-        plt.title('MSE minimización')
-        plt.xlabel('Iteraciones')
-        plt.ylabel('MSE')
+    # Enable legend
+    ax.legend()
+    ax.set_title("AE cost function minimization")
+    ax.set_xlabel('Iterations')
+    ax.set_ylabel('Cost')
 
-        # Save the plot to a file
-        plt.savefig('trn-graph.png')
-
-    # Display the plot
+    plt.savefig(path_to_save)
     plt.show()
-   

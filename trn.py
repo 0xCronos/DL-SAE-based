@@ -104,6 +104,7 @@ def train_ae(X, amount_of_nodes, params):
 def train_dl(X, params):
     W = []
 
+    mses = []
     encoders_nodes = list(params.values())[8:]
     for n, amount_of_nodes in enumerate(encoders_nodes):
         print(f'Training autoencoder {n+1}...')
@@ -112,7 +113,11 @@ def train_dl(X, params):
 
         W.append(We)
         print(f'Training autoencoder {n+1}...: Done')
+        mses.append(ae_mse)
 
+    ut.plot_this(mses, 'graphs/ae/all.png', [f'Autoencoder {i+1}' for i in range(len(mses))])
+    for i in range(len(mses)):
+        ut.plot_this([mses[i]], f'graphs/ae/{i+1}.png', [f'Autoencoder {i+1}'])
     return W, X
 
 
